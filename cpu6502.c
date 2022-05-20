@@ -79,22 +79,42 @@ word getEA(CPU6502* cpu, byte inst, byte inc) {
 
 void c6502_adc(CPU6502* cpu, byte arg) {
   word a,b,c;
-  a = cpu->a;
-  b = arg;
-  c = a + b;
-  if ((cpu->p & 1) != 0) c++;
-  cpu->a = c & 0xff;
-  if (cpu->a == 0) cpu->p |= FLAG_Z; else cpu->p &= (~FLAG_Z);
-  if (cpu->a >= 0x80) cpu->p |= FLAG_N; else cpu->p &= (~FLAG_N);
-  if (c >= 256) cpu->p |= FLAG_C; else cpu->p &= (~FLAG_C);
-  if ((a & 0x80) == (b & 0x80)) {
-    if ((a & 0x80) != (cpu->a & 0x80))
-      cpu->p |= FLAG_V;
+  if (cpu->p & FLAG_D) {
+    a = (((cpu->a & 0xf0) >> 4) * 10) + (cpu->a & 0x0f);
+    b = (((arg & 0xf0) >> 4) * 10) + (arg & 0x0f);
+    c = a + b;
+    if (cpu->p & FLAG_C) c++;
+    if (c >= 100) {
+      cpu->p |= FLAG_C;
+      c -= 100;
+      }
+    else {
+      cpu->p &= (~FLAG_C);
+      }
+    cpu->a = (c / 10) << 4;
+    cpu->a |= (c % 10);
+    if (cpu->a == 0) cpu->p |= FLAG_Z; else cpu->p &= (~FLAG_Z);
+    cpu->p &= (~FLAG_N);
+    cpu->p &= (~FLAG_V);
+    }
+  else {
+    a = cpu->a;
+    b = arg;
+    c = a + b;
+    if ((cpu->p & 1) != 0) c++;
+    cpu->a = c & 0xff;
+    if (cpu->a == 0) cpu->p |= FLAG_Z; else cpu->p &= (~FLAG_Z);
+    if (cpu->a >= 0x80) cpu->p |= FLAG_N; else cpu->p &= (~FLAG_N);
+    if (c >= 256) cpu->p |= FLAG_C; else cpu->p &= (~FLAG_C);
+    if ((a & 0x80) == (b & 0x80)) {
+      if ((a & 0x80) != (cpu->a & 0x80))
+        cpu->p |= FLAG_V;
+      else
+        cpu->p &= (~FLAG_V);
+      }
     else
       cpu->p &= (~FLAG_V);
     }
-  else
-    cpu->p &= (~FLAG_V);
   }
 
 
@@ -320,9 +340,30 @@ void c6502_ror(CPU6502* cpu, byte inst) {
   }
 
 void c6502_sbc(CPU6502* cpu, byte arg) {
-  arg = (~arg) + 1;
-  cpu->p ^= 1;
-  c6502_adc(cpu, arg);
+  int a,b,c;
+  if (cpu->p & FLAG_D) {
+    a = (((cpu->a & 0xf0) >> 4) * 10) + (cpu->a & 0x0f);
+    b = (((arg & 0xf0) >> 4) * 10) + (arg & 0x0f);
+    c = a - b;
+    if ((cpu->p & FLAG_C) == 0) c--;
+    if (c >= 0) {
+      cpu->p |= FLAG_C;
+      }
+    else {
+      cpu->p &= (~FLAG_C);
+      c += 100;
+      }
+    cpu->a = (c / 10) << 4;
+    cpu->a |= (c % 10);
+    if (cpu->a == 0) cpu->p |= FLAG_Z; else cpu->p &= (~FLAG_Z);
+    cpu->p &= (~FLAG_N);
+    cpu->p &= (~FLAG_V);
+    }
+  else {
+    arg = (~arg) + 1;
+    cpu->p ^= 1;
+    c6502_adc(cpu, arg);
+    }
   }
 
 void c6502_sta(CPU6502* cpu, byte inst) {
@@ -1786,6 +1827,7 @@ void c6502_reset(CPU6502* cpu) {
   cpu->s = 0xfd;
   cpu->irq = 0;
   cpu->nmi = 0;
+  cpu->clocks = 0;
   }
 
 void c6502_irq(CPU6502* cpu) {
@@ -1799,7 +1841,7 @@ void c6502_nmi(CPU6502* cpu) {
 void c6502_cycle(CPU6502* cpu) {
   byte c;
   if (cpu->idle != 0) {
-    cpu->clocks = 1;
+    cpu->clocks = 0;
     return;
     }
   cpu->clocks = 0;
