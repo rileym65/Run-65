@@ -7,6 +7,10 @@ int  numBreakpoints;
 int  tracing;
 byte traps[256];
 unsigned int clocks;
+char conditions[100][256];
+int  numConditions;
+char useConditions;
+
 
 void Cls() {
   printf("\e[H\e[2J");
@@ -206,6 +210,49 @@ void debugger_b(char* line) {
     }
   }
 
+void debugger_c(char*line) {
+  int i;
+  int j;
+  char outp[300];
+  if (*line == '?') {
+    Output("Conditional breakpoints:");
+    for (i=0; i<numConditions; i++) {
+      sprintf(outp,"%d:%s",i+1,conditions[i]);
+      Output(outp);
+      }
+    return;
+    }
+  if (*line == '+' && *(line+1) == '+') {
+    useConditions = 'Y';
+    Output("Conditions enabled");
+    return;
+    }
+  if (*line == '-' && *(line+1) == '-') {
+    useConditions = 'N';
+    Output("Conditions disabled");
+    return;
+    }
+  if (*line == '+') {
+    line++;
+    strcpy(conditions[numConditions++], line);
+    return;
+    }
+  if (*line == '-') {
+    line++;
+    j = atoi(line) - 1;
+    if (j >= 0 && j < numConditions) {
+      for (i=j; i<numConditions-1; i++)
+        strcpy(conditions[i], conditions[i+1]);
+      numConditions--;
+      }
+    }
+  if (*line == 'c' || *line == 'C') {
+    numConditions = 0;
+    return;
+    }
+  }
+
+
 void debugger_p(char*line) {
   if (*line == '=') {
     line++;
@@ -322,6 +369,13 @@ void debugger_run(char* line) {
         run = 0;
         UpdateScreen();
         }
+    if (useConditions == 'Y') {
+      for (i=0; i<numConditions; i++)
+        if (evaluate(conditions[i]) != 0) {
+          run = 0;
+          UpdateScreen();
+          }
+      }
     if (traps[ram[cpu.pc]] != 0) {
       run = 0;
       UpdateScreen();
@@ -339,6 +393,8 @@ void Debugger() {
   for (i=0; i<256; i++) traps[i] = 0;
   address = 0;
   numBreakpoints = 0;
+  numConditions = 0;
+  useConditions = 'Y';
   tracing = 0;
   clocks = 0;
   DrawScreen();
@@ -358,6 +414,7 @@ void Debugger() {
     if (line[0] == '$') debugger_dl(line+1);
     if (line[0] == '!') debugger_ex(line+1);
     if (line[0] == 'b' || line[0] == 'B') debugger_b(line+1);
+    if (line[0] == 'c' || line[0] == 'C') debugger_c(line+1);
     if (line[0] == 't' || line[0] == 'T') debugger_t(line+1);
     if (line[0] == 'a' || line[0] == 'A') debugger_a(line+1);
     if (line[0] == 's' || line[0] == 'S') debugger_s(line+1);

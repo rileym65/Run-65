@@ -15,6 +15,12 @@
   B+addr         - add break point
   B-addr         - remove break point
   BC             - clear all breakpoints
+  C+expr         - Add conditional breakpoint
+  C-num          - Remove specified conditional breakpoint
+  C?             - Show conditional breakpoints
+  C++            - Enable conditional breakpoints
+  C--            - Disable conditional breakpoints
+  CC             - Clear all conditional breakpoints
   I              - trigger IRQ
   N              - trigger NMI
   P=bb           - set P to bb

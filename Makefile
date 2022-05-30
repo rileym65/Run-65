@@ -9,6 +9,7 @@ OBJS=\
 	cpu6502.o \
 	debugger.o \
 	disassem.o \
+	evaluate.o \
 	loadfile.o \
 	main.o
 
@@ -25,5 +26,6 @@ clean:
 cpu6502.o:      header.h cpu6502.h cpu6502.c
 debugger.o:     header.h debugger.c
 disassem.o:     header.h disassem.c
+evaluate.o:     header.h evaluate.c
 loadfile.o:     header.h loadfile.c
 main.o:         header.h cpu6502.h main.c
